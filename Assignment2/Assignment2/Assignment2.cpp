@@ -46,6 +46,13 @@ static int currentPolygon;
 static int currentPoint;
 static int polygonCount;
 static int currentEdge;
+static int clippingMode;
+
+static int clipRectStartX;
+static int clipRectStartY;
+
+static int clipRectEndX;
+static int clipRectEndY;
 
 static int maxScreenY = INT_MIN;
 static int minScreenY = INT_MAX;
@@ -199,9 +206,6 @@ void renderPolygon(){
 
 
 		}
-
-
-
 		scanLine++;
 	}
 
@@ -211,6 +215,8 @@ void display(void)
 {
 	// should not be necessary but some GPUs aren't displaying anything until a clear call.
 	glClear (GL_COLOR_BUFFER_BIT);
+	drawit();
+	cout << "Rectangle coordinates " << clipRectStartX << " " << clipRectStartY << " " << clipRectEndX << " " << clipRectEndY <<endl;
 }
 void populateEdgeStruct(){
 	
@@ -313,13 +319,18 @@ void mouseClick(int button,int state,int x, int y){
 		
 		case GLUT_LEFT_BUTTON:
 			if(state == GLUT_DOWN){
-				p[currentPolygon][currentPoint].x = x;
-				p[currentPolygon][currentPoint].y = y;
-				setFramebuffer(x,y,col.r,col.g,col.b);
-				drawit();
-				glFlush();
-				cout << "Points " << x << " " << y << endl;
-				currentPoint++;
+				if(!clippingMode){
+					p[currentPolygon][currentPoint].x = x;
+					p[currentPolygon][currentPoint].y = y;
+					setFramebuffer(x,y,col.r,col.g,col.b);
+					drawit();
+					glFlush();
+					cout << "Points " << x << " " << y << endl;
+					currentPoint++;
+				}else{
+					clipRectStartX = x;
+					clipRectStartY = y;
+				}
 			}
 			break;
 		case GLUT_RIGHT_BUTTON:
@@ -327,20 +338,22 @@ void mouseClick(int button,int state,int x, int y){
 			//currentPoint = 0;
 			//polygonCount++;
 			if(state == GLUT_DOWN){
-				p[currentPolygon][currentPoint].x = x;
-				p[currentPolygon][currentPoint].y = y;
-				setFramebuffer(x,y,col.r,col.g,col.b);
-				drawit();
-				glFlush();
-				//currentPoint++;
-				cout << "Points " << x << " " << y << endl;
-				populateEdgeStruct();
-				drawit();
-				glFlush();
-				col.r = ((double) rand() / (RAND_MAX));
-				col.g = ((double) rand() / (RAND_MAX));
-				col.b = ((double) rand() / (RAND_MAX));
-				cout << "Colors " << col.r << " " << col.g << " " << col.b;
+				if(!clippingMode){
+					p[currentPolygon][currentPoint].x = x;
+					p[currentPolygon][currentPoint].y = y;
+					setFramebuffer(x,y,col.r,col.g,col.b);
+					drawit();
+					glFlush();
+					//currentPoint++;
+					cout << "Points " << x << " " << y << endl;
+					populateEdgeStruct();
+					drawit();
+					glFlush();
+					col.r = ((double) rand() / (RAND_MAX));
+					col.g = ((double) rand() / (RAND_MAX));
+					col.b = ((double) rand() / (RAND_MAX));
+					cout << "Colors " << col.r << " " << col.g << " " << col.b;
+				}
 			}
 			break;
 
@@ -348,7 +361,41 @@ void mouseClick(int button,int state,int x, int y){
 	}
 
 }
+void motionMove(int x, int y){
 
+	if(clippingMode){
+	
+		glColor3f(1.0,1.0,1.0);
+		glLineStipple(1, 0xAAAA);
+		glEnable(GL_LINE_STIPPLE);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glBegin(GL_QUADS);
+		glVertex2d(clipRectStartX, clipRectStartY);
+		glVertex2d(x, clipRectStartY);
+		glVertex2d(x, y);
+		glVertex2d(clipRectStartX, y);
+		glEnd();
+		glFlush();
+	}
+
+	clipRectEndX = x;
+	clipRectEndY = y;
+	glutPostRedisplay();
+
+}
+void keyboard(unsigned char key, int x, int y){
+
+	switch(key){
+	
+		case 'c':
+			clippingMode = 1;
+			break;
+
+	
+	}
+
+}
 void init(void)
 {
 	gluOrtho2D ( 0, ImageW - 1, ImageH - 1, 0 );
@@ -368,6 +415,8 @@ int main(int argc, char** argv)
 	init();	
 	glutDisplayFunc(display);
 	glutMouseFunc(mouseClick);
+	glutMotionFunc(motionMove);
+	glutKeyboardFunc(keyboard);
 	glutMainLoop();
 	return 0;
 }
