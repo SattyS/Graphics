@@ -311,69 +311,6 @@ void populateEdgeStruct(float frame[400][400][3],struct color colA){
 	currentEdge = 0;
 
 }
-// On mouse click callback
-void mouseClick(int button,int state,int x, int y){
-
-	switch(button){
-		
-		case GLUT_LEFT_BUTTON:
-			if(state == GLUT_DOWN){
-				if(!clippingMode){
-					p[currentPolygon][currentPoint].x = x;
-					p[currentPolygon][currentPoint].y = y;
-					setFramebuffer(x,y,col[currentPolygon].r,col[currentPolygon].g,col[currentPolygon].b,framebuffer);
-					drawit(framebuffer);
-					glFlush();
-					currentPoint++;
-				}else{
-					clipRectStartX = x;
-					clipRectStartY = y;
-				}
-			}
-			break;
-		case GLUT_RIGHT_BUTTON:
-			if(state == GLUT_DOWN){
-				if(!clippingMode){
-					p[currentPolygon][currentPoint].x = x;
-					p[currentPolygon][currentPoint].y = y;
-					setFramebuffer(x,y,col[currentPolygon].r,col[currentPolygon].g,col[currentPolygon].b,framebuffer);
-					drawit(framebuffer);
-					glFlush();
-					populateEdgeStruct(framebuffer,col[currentPolygon]);
-					drawit(framebuffer);
-					glFlush();
-					col[currentPolygon].r = ((double) rand() / (RAND_MAX));
-					col[currentPolygon].g = ((double) rand() / (RAND_MAX));
-					col[currentPolygon].b = ((double) rand() / (RAND_MAX));
-				}
-			}
-			break;
-	}
-
-}
-// Mouse move callback for clipping rectangle
-void motionMove(int x, int y){
-
-	if(clippingMode){
-	
-		glColor3f(1.0,1.0,1.0);
-		glLineStipple(1, 0xAAAA);
-		glEnable(GL_LINE_STIPPLE);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glBegin(GL_QUADS);
-		glVertex2d(clipRectStartX, clipRectStartY);
-		glVertex2d(x, clipRectStartY);
-		glVertex2d(x, y);
-		glVertex2d(clipRectStartX, y);
-		glEnd();
-		glFlush();
-	}
-
-	clipRectEndX = x;
-	clipRectEndY = y;
-	glutPostRedisplay();
-
-}
 // Clip
 std::list<struct point> clip (std::list<struct point> li, int dir, int xy){
 
@@ -737,6 +674,104 @@ void clipPolygon(){
 	drawit(clipFrameBuffer);
 	glFlush();
 }
+// On mouse click callback
+void mouseClick(int button,int state,int x, int y){
+
+	switch(button){
+		
+		case GLUT_LEFT_BUTTON:
+			if(state == GLUT_DOWN){
+				if(!clippingMode){
+					p[currentPolygon][currentPoint].x = x;
+					p[currentPolygon][currentPoint].y = y;
+					setFramebuffer(x,y,col[currentPolygon].r,col[currentPolygon].g,col[currentPolygon].b,framebuffer);
+					drawit(framebuffer);
+					glFlush();
+					currentPoint++;
+				}else{
+					clipRectStartX = x;
+					clipRectStartY = y;
+				}
+			}
+			break;
+		case GLUT_RIGHT_BUTTON:
+			if(state == GLUT_DOWN){
+				if(!clippingMode){
+					p[currentPolygon][currentPoint].x = x;
+					p[currentPolygon][currentPoint].y = y;
+					setFramebuffer(x,y,col[currentPolygon].r,col[currentPolygon].g,col[currentPolygon].b,framebuffer);
+					drawit(framebuffer);
+					glFlush();
+					populateEdgeStruct(framebuffer,col[currentPolygon]);
+					drawit(framebuffer);
+					glFlush();
+					col[currentPolygon].r = ((double) rand() / (RAND_MAX));
+					col[currentPolygon].g = ((double) rand() / (RAND_MAX));
+					col[currentPolygon].b = ((double) rand() / (RAND_MAX));
+				}
+			}
+			break;
+	}
+
+	if(state == GLUT_UP && clippingMode == 1 && dispClip != 1){
+		
+		clearPoint();
+		clearEdge();
+		// Changing startXY and endXY depending upon the way in which the clipping rectangle was drawn - Fix
+		int tempStartX = clipRectStartX;
+		int tempStartY = clipRectStartY;
+		int tempEndX = clipRectEndX;
+		int tempEndY = clipRectEndY;
+		if(clipRectStartX < clipRectEndX){
+			if(clipRectStartY < clipRectEndY){
+				clipRectStartY = tempEndY;
+				clipRectEndY = tempStartY;
+			}else{
+				//clipRectEndX = x;
+				//clipRectEndY = y;
+			}
+		}else{
+			if(clipRectStartY < clipRectEndY){
+				clipRectStartX = tempEndX;
+				clipRectStartY = tempEndY;
+				clipRectEndX = tempStartX;
+				clipRectEndY = tempStartY;
+			}else{
+				clipRectStartX = tempEndX;
+				clipRectEndX = tempStartX;
+			}
+		}
+		clipPolygon();
+		dispClip = 1;
+		
+	}
+
+}
+// Mouse move callback for clipping rectangle
+void motionMove(int x, int y){
+
+	if(clippingMode){
+		
+		drawit(framebuffer);
+		glColor3f(1.0,1.0,1.0);
+		glLineStipple(1, 0xAAAA);
+		glEnable(GL_LINE_STIPPLE);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glBegin(GL_QUADS);
+		glVertex2d(clipRectStartX, clipRectStartY);
+		glVertex2d(x, clipRectStartY);
+		glVertex2d(x, y);
+		glVertex2d(clipRectStartX, y);
+		glEnd();
+		glFlush();
+		clipRectEndX = x;
+		clipRectEndY = y;
+		dispClip = 0;
+		glutPostRedisplay();
+	}
+
+}
+
 // Keyboard callback
 void keyboard(unsigned char key, int x, int y){
 
@@ -755,11 +790,13 @@ void keyboard(unsigned char key, int x, int y){
 			clippingMode = 1;
 			break;
 
+	/*
 		case 's':
 			clearPoint();
 			clearEdge();
 			clipPolygon();
 			dispClip = 1;
+	*/
 	}
 
 }
