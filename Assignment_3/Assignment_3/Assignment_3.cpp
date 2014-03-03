@@ -1,9 +1,4 @@
-// Assignment_3.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
-
-
 #include <GL/glut.h>
 #include "assignment3.h"
 #include "init.h"
@@ -14,15 +9,17 @@
 #include <time.h>
 #include <windows.h>
 
+//Iterated Affine transformation matrices contained in a vector
 vector<Matrix> iat;
 
+// Condensation sets as points contained in a vector
 vector<Pt> cs;
 
-
+// Calculate determinant of 2*2 matrix
 float determinant2D(float a, float b, float c, float d){
 	return ((a * d) - (b * c));
 }
-
+// Calculates inverse of a 3*3 matrix
 Matrix inverse(Matrix M1){
 	
 	float A = 0;
@@ -30,7 +27,8 @@ Matrix inverse(Matrix M1){
 		- M1.data[0][1] * determinant2D(M1.data[1][0], M1.data[1][2], M1.data[2][0], M1.data[2][2])
 		+ M1.data[0][2] * determinant2D(M1.data[1][0], M1.data[1][1], M1.data[2][0], M1.data[2][1]);
 
-	cout << "A " << A << endl;
+	//cout << "A " << A << endl;
+
 	Matrix rvalue;
 
 	rvalue.data[0][0] = determinant2D(M1.data[1][1], M1.data[1][2], M1.data[2][1], M1.data[2][2]) * (1/A);
@@ -48,6 +46,7 @@ Matrix inverse(Matrix M1){
 	return rvalue;
 
 }
+// Translate
 Matrix translate ( Vec v )
 {
 	Matrix rvalue;
@@ -61,7 +60,7 @@ Matrix translate ( Vec v )
 
 	return rvalue;
 }
-
+// Rotate
 Matrix rotate ( Pt p, float theta )
 {
 	Matrix rvalue;
@@ -79,7 +78,7 @@ Matrix rotate ( Pt p, float theta )
 
 	return rvalue;
 }
-
+// Uniform scale
 Matrix scale ( Pt p, float alpha )
 {
 	Matrix rvalue;
@@ -94,7 +93,7 @@ Matrix scale ( Pt p, float alpha )
 
 	return rvalue;
 }
-
+// Non-uniform scale
 Matrix nscale ( Pt p, Vec v, float alpha )
 {
 	Matrix rvalue;
@@ -111,7 +110,7 @@ Matrix nscale ( Pt p, Vec v, float alpha )
 	
 	return rvalue;
 }
-
+// Image - Best function ever written
 Matrix image ( Pt p1, Pt p2, Pt p3, Pt q1, Pt q2, Pt q3 )
 {
 	Matrix rvalue;
@@ -147,7 +146,7 @@ Matrix image ( Pt p1, Pt p2, Pt p3, Pt q1, Pt q2, Pt q3 )
 	
 	return rvalue;
 }
-
+// Multiplies 2 3*3 matrices
 Matrix compose ( Matrix m2, Matrix m1 )
 {
 	Matrix rvalue;
@@ -163,40 +162,31 @@ Matrix compose ( Matrix m2, Matrix m1 )
 	}
 	return rvalue;
 }
-
+// Set condensation set
 void setCondensationSet ( vector<Pt> pts )
 {
 	cs = pts;
 }
-
+// Set IAT 
 void setIATTransformations ( vector<Matrix> transformations )
 {
 	iat = transformations;
 }
-
-// Draws the current IAT
-void display ( void )
-{
-	glFlush();
-	
-}
-
+// Function to display the fractal once iat and cs if any are set
 void dispFractal(){
-	glColor3f(1.0f,0.0f,0.0f); //blue color
+	// Queue that stores the final points that are to be rendered as fractal points
 	queue<vector<Matrix>> wp;
 	vector<Matrix> initialPoints;
-	//cout << iat.size();
-	for(int i=0; i< 3; i++){
+	// 5 Random initial points to start with
+	for(int i=0; i< 5; i++){
 		Matrix temp;
 		temp.data[0][0] = -1+2*((float)rand())/RAND_MAX;
 		temp.data[1][0] = -1+2*((float)rand())/RAND_MAX;
-		//cout << temp.data[0][0] << " " << temp.data[1][0];
 		temp.data[2][0] = 1.0f;
-		//glBegin(GL_LINE_LOOP);
-		//glVertex3f(temp.data[0][0],temp.data[1][0],0.0f);
 		initialPoints.push_back(temp);
 	}
 	wp.push(initialPoints);
+	// Storing condensation set points as matrices as I've considered everything as 3*3 matrix
 	vector<Matrix> cp;
 	for(int i=0; i<cs.size(); i++){
 		Matrix t;
@@ -205,18 +195,14 @@ void dispFractal(){
 		t.data[2][0] = 1.0f;
 		cp.push_back(t);
 	}
-	//cout << "CS size " << cp.size() << endl;
-	//glEnd();
-	//glFlush();
 	int levelCount;
-	levelCount = (iat.size() > 3) ? 5 : 8;
+	// Fractals with IAT > 3 will have a tree of depth 5, else it will be 10
+	levelCount = (iat.size() > 3) ? 5 : 10;
 	for(int level = 0; level < levelCount; level++){
-		int powCond = pow((float)iat.size(), level);
-		//cout << powCond << endl;
+		int powCond;
 		powCond = wp.size();
-		cout << "Level check " << wp.size() << endl;
+		// Breadth first method
 		for(int perLevel = 0; perLevel < powCond; perLevel++){
-			//cout << "q size " << wp.size() << endl;
 			vector<Matrix> tempVec = wp.front();
 			wp.pop();
 			for(int iatIterator=0; iatIterator < iat.size(); iatIterator++){
@@ -230,21 +216,27 @@ void dispFractal(){
 			}	
 			if(cp.size() > 0){
 				wp.push(cp);
-				//cout << "CS check " << wp.size() << endl;
 			}
 		}
 	}
-	cout << wp.size() << endl;
+	// Display stored points
 	for(int i=0; i< wp.size(); i++){
+		// Fractals with CS are displayed using line loop
 		if(cp.size() > 0){
 			glBegin(GL_LINE_LOOP);
 		}else{
 			glBegin(GL_POINTS);
 		}
+		// just changing R,G,B colors alternatively
+		if(i % 3 == 0){
+			glColor3f(1.0f,0.0f,0.0f);
+		}else if(i % 3 == 1){
+			glColor3f(0.0f,1.0f,0.0f);
+		}else{
+			glColor3f(0.0f,0.0f,1.0f);
+		}
 		vector<Matrix> tempV = wp.front();
 		for(int k=0; k<tempV.size(); k++){
-			//cout << i << endl;
-			//cout << tempV.at(k).data[0][0] << ":" << tempV.at(k).data[1][0] << endl;
 			glVertex3f(tempV.at(k).data[0][0],tempV.at(k).data[1][0],0.0f);
 		}
 		wp.pop();
@@ -256,18 +248,22 @@ void dispFractal(){
 			}
 		}
 	}
+	// Display the CS accordingly
 	if(cs.size() == 1){
+		glColor3f(0.0f,0.0f,1.0f);
 		glBegin(GL_POINTS);
 		glVertex3f(cs.at(0).x,cs.at(0).y,0.0f);
 		glEnd();
 		glFlush();
 	}else if(cs.size() == 2){
+		glColor3f(0.0f,0.0f,1.0f);
 		glBegin(GL_LINES);
 		glVertex3f(cs.at(0).x,cs.at(0).y,0.0f);
 		glVertex3f(cs.at(1).x,cs.at(1).y,0.0f);
 		glEnd();
 		glFlush();
 	}else{
+		glColor3f(0.0f,0.0f,1.0f);
 		glBegin(GL_LINE_LOOP);
 		for(int i=0; i<cs.size(); i++){
 			glVertex3f(cs.at(i).x,cs.at(i).y,0.0f);
@@ -275,7 +271,21 @@ void dispFractal(){
 		glEnd();
 		glFlush();
 	}
-}	
+}
+// Draws the current IAT
+void display ( void )
+{
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f );
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if(!iat.empty()){
+		cout << "IAT size " << iat.size() << endl;
+		cout << "Fractal with IAT size > 3 will run for 5 iterations and others will run for 10 iterations " << endl;
+		cout << "Loading..." << endl;
+		dispFractal();
+	}
+	glFlush();
+}
 /* do not modify the reshape function */
 void reshape ( int width, int height )
 {
@@ -286,17 +296,87 @@ void reshape ( int width, int height )
 	glMatrixMode ( GL_MODELVIEW );
     glLoadIdentity ( );
 }
+// Clear the IAT and CS vectors
+void clearIAT(){
+	while(!iat.empty()){
+		iat.pop_back();
+	}
+	while(!cs.empty()){
+		cs.pop_back();
+	}
+}
 // Keyboard callback
 void keyboard(unsigned char key, int x, int y){
 
 	switch(key){
-	
+		// Used image function and transformation functions alternatively, according to which one is easy
 		case '1':
-			dispFractal();
+			clearIAT();
+			iat.push_back( image(Pt(-0.45,0), Pt(0.45,0), Pt(0.45,0.9), Pt(-0.45,0), Pt(0,0), Pt(0,0.45)) );
+			iat.push_back( image(Pt(-0.45,0), Pt(0.45,0), Pt(0.45,0.9), Pt(0,0), Pt(0.45,0), Pt(0.45,0.45)) );
+			iat.push_back( image(Pt(-0.45,0), Pt(0.45,0), Pt(0.45,0.9), Pt(0.45,0.45), Pt(0.45,0.9), Pt(0,0.9)) );
+			break;
+		case '2':
+			clearIAT();
+			iat.push_back ( compose(scale( Pt(0,0.45) , 0.5), translate(Vec(0,0.45)) ));
+			iat.push_back ( compose(scale( Pt(0.45,0) , 0.5), translate(Vec(0.45,0)) ));
+			cs.push_back(Pt(0,0));
+			cs.push_back(Pt(0.45,0));
+			cs.push_back(Pt(0.45,0.45));
+			cs.push_back(Pt(0,0.45));
+			break;
+		case '3':
+			clearIAT();
+			iat.push_back( image(Pt(0,0.3268), Pt(-0.45,0), Pt(0.45,0), Pt(0,0.3268), Pt(-0.1718,0.2020), Pt(0.1718,0.2020)) );
+			iat.push_back( image(Pt(0,0.3268), Pt(-0.45,0), Pt(0.45,0), Pt(-0.278,0.1248), Pt(-0.45,0), Pt(-0.1062,0)) );
+			iat.push_back( image(Pt(0,0.3268), Pt(-0.45,0), Pt(0.45,0), Pt(0.278,0.1248), Pt(0.1062,0), Pt(0.45,0)) );
+			iat.push_back( image(Pt(0,0.3268), Pt(-0.45,0), Pt(0.45,0), Pt(-0.1718,-0.2020), Pt(-0.3437,-0.3268), Pt(0,-0.3268)) );
+			iat.push_back( image(Pt(0,0.3268), Pt(-0.45,0), Pt(0.45,0), Pt(0.1718,-0.2020), Pt(0,-0.3268), Pt(0.3437,-0.3268)) );
+			iat.push_back( image(Pt(0,0.3268), Pt(-0.45,0), Pt(0.45,0), Pt(0,-0.3268), Pt(0.1718,-0.2020), Pt(-0.1718,-0.2020)) );
+			break;
+		case '4':
+			clearIAT();
+			iat.push_back ( scale( Pt(-.9, 0), 0.33) );
+			iat.push_back ( scale( Pt (-.45, -.7794), 0.33 ) );
+			iat.push_back ( scale( Pt (.45, -.7794), 0.33 ) );
+			iat.push_back ( scale( Pt (.9, 0), 0.33) );
+			iat.push_back ( scale( Pt (.45, .7794), 0.33 ) );
+			iat.push_back ( scale( Pt (-.45, .7794), 0.33 ) );
+			break;
+		// Square Carpet
+		case '5':
+			clearIAT();
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(-.9,.9), Pt(-0.3,0.9), Pt(-.3,.3)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(-0.3,0.9), Pt(0.3,0.9), Pt(0.3,0.3)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(0.3,0.9), Pt(0.9,0.9), Pt(0.9,0.3)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(-.9,0.3), Pt(-0.3,0.3), Pt(-0.3,-0.3)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(0.3,0.3), Pt(0.9,0.3), Pt(0.9,-0.3)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(-0.9,-0.3), Pt(-0.3,-0.3), Pt(-0.3,-0.9)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(-0.3,-0.3), Pt(0.3,-0.3), Pt(0.3,-.9)) );
+			iat.push_back( image(Pt(-.9,.9), Pt(.9,.9), Pt(.9,-.9), Pt(0.3,-0.3), Pt(0.9,-0.3), Pt(0.9,-0.9)) );
+			// Partial snow flake image given in class, decided to go with carpet instead
+			/*
+				iat.push_back( image(Pt(-0.9,0), Pt(0,0.45), Pt(0.9,0), Pt(-0.9,0), Pt(-0.6,0.15), Pt(-0.3,0)) );
+				iat.push_back( image(Pt(-0.9,0), Pt(0,0.45), Pt(0.9,0), Pt(-0.3,0), Pt(-0.3,0.3), Pt(0,0.45)) );
+				iat.push_back( image(Pt(-0.9,0), Pt(0,0.45), Pt(0.9,0), Pt(0,0.45), Pt(0.3,0.3), Pt(0.3,0)) );
+				iat.push_back( image(Pt(-0.9,0), Pt(0,0.45), Pt(0.9,0), Pt(0.3,0), Pt(0.6,0.15), Pt(0.9,0)) );
+			*/
+			break;
+		// Tree
+		case '6':
+			clearIAT();
+			iat.push_back ( compose(rotate (Pt(-0.225,-0.45) , 0.7853), compose(scale( Pt(-0.225,-0.45) , 0.5 * 1.414), translate(Vec(0,0.45)) )));
+			iat.push_back ( compose(rotate (Pt(0.225,-0.45) , -0.7853), compose(scale( Pt(0.225,-0.45) , 0.5 * 1.414), translate(Vec(0,0.45)) )));
+			cs.push_back(Pt(-0.225,-0.9));
+			cs.push_back(Pt(0.225,-0.9));
+			cs.push_back(Pt(0.225,-0.45));
+			cs.push_back(Pt(-0.225,-0.45));
 			break;
 	}
+	glutPostRedisplay();
 
 }
+//Main
 int main ( int argc, char** argv )
 {
 	glutInit ( &argc, argv );
@@ -306,35 +386,11 @@ int main ( int argc, char** argv )
 	glutInitWindowPosition ( 100, 100 );
 	glutCreateWindow ( "Sathish Sekar - Homework 3" );
 	srand(time(NULL));
-	init();	
-	/*
-	Matrix test;
-	test.data[0][0] = 1;
-	test.data[0][1] = 2;
-	test.data[0][2] = 3;
-
-	test.data[1][0] = 3;
-	test.data[1][1] = 2;
-	test.data[1][2] = 1;
-
-	test.data[2][0] = 2;
-	test.data[2][1] = 1;
-	test.data[2][2] = 3;
-
-	test = inverse(test);
-
-	for(int i=0;i < 3; i++){
-		for(int j=0; j < 3; j++){
-			cout << test.data[i][j] << " ";
-		}
-		cout << endl;
-	}
-	*/
+	init();
 	glutDisplayFunc ( display );
 	glutReshapeFunc ( reshape );
 	glutKeyboardFunc(keyboard);
 	glutMainLoop ( );
 	return 0;
 }
-
 
